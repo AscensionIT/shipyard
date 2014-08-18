@@ -38,7 +38,7 @@ task :install do
   `/etc/init.d/nginx stop`
 
   #Install Shipyard
-  `docker run -i -t -v /var/run/docker.sock:/docker.sock shipyard/deploy setup`
+  `docker run -t -v /var/run/docker.sock:/docker.sock shipyard/deploy setup`
   `curl https://github.com/shipyard/shipyard-agent/releases/download/v0.3.2/shipyard-agent -L -o /usr/local/bin/shipyard-agent`
   `chmod +x /usr/local/bin/shipyard-agent`
 
