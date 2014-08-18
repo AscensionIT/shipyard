@@ -42,9 +42,13 @@ task :install do
   `curl https://github.com/shipyard/shipyard-agent/releases/download/v0.3.2/shipyard-agent -L -o /usr/local/bin/shipyard-agent`
   `chmod +x /usr/local/bin/shipyard-agent`
 
+begin
 status = Timeout::timeout(20) {
   `aa=$(shipyard-agent -url http://#{app_config[:system_fqdn]}:8000 -register 2>&1 ); key=\`echo ${aa##* }\`; shipyard-agent -url http://#{app_config[:system_fqdn]}:8000 -key $key &`
 }
+rescue Exception => e
+puts 'rescued'
+end
 
 uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/login")
 http = Net::HTTP.new(uri.host, uri.port)
