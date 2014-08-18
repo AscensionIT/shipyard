@@ -35,8 +35,6 @@ task :install do
   app_config[:phone] = metadata['phone']
   app_config[:fax] = metadata['fax']
 
-  `/etc/init.d/nginx stop`
-
   #Install Shipyard
   `docker run -t -v /var/run/docker.sock:/docker.sock shipyard/deploy setup`
   `curl https://github.com/shipyard/shipyard-agent/releases/download/v0.3.2/shipyard-agent -L -o /usr/local/bin/shipyard-agent`
@@ -69,6 +67,13 @@ req.body = {:enabled => true}.to_json
 response = http.request(req)
 
 puts response.code
+
+  File.unlink("/etc/nginx/sites-available/default")
+
+  new_config = ERB.new(File.read("/var/www/default")).result(binding)
+  File.open("/etc/nginx/sites-available/default", "w"){|file| file.write(new_config) }
+
+  `/etc/init.d/nginx restart`
 
   #Uninstall unwanted apps
 #  `apt-get remove -y mysql-server mysql-server-core-5.5 phpmyadmin`
