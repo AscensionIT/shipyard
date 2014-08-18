@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'fileutils'
+require 'timeout'
 require 'erb'
 require 'tempfile'
 require 'securerandom'
@@ -40,7 +41,30 @@ task :install do
   `docker run -i -t -v /var/run/docker.sock:/docker.sock shipyard/deploy setup`
   `curl https://github.com/shipyard/shipyard-agent/releases/download/v0.3.2/shipyard-agent -L -o /usr/local/bin/shipyard-agent`
   `chmod +x /usr/local/bin/shipyard-agent`
+
+status = Timeout::timeout(20) {
   `aa=$(shipyard-agent -url http://#{app_config[:system_fqdn]}:8000 -register 2>&1 ); key=\`echo ${aa##* }\`; shipyard-agent -url http://#{app_config[:system_fqdn]}:8000 -key $key &`
+}
+
+uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/login")
+http = Net::HTTP.new(uri.host, uri.port)
+req = Net::HTTP::Post.new(uri.request_uri)
+req.set_form_data('username' => 'admin', 'password' => 'shipyard')
+response_json = http.request(req)
+api_key = JSON.parse(response_json.body)['api_key']
+
+
+uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/v1/hosts/1/")
+http = Net::HTTP.new(uri.host, uri.port)
+req = Net::HTTP::Put.new(uri.request_uri)
+req.add_field("Authorization", "ApiKey admin:#{api_key}")
+req.add_field("Content-Type", "application/json")
+#req.set_form_data('{"enabled": true}')
+#req.set_form_data('enabled' => false)
+req.body = {:enabled => true}.to_json
+response = http.request(req)
+
+puts response.code
 
   #Uninstall unwanted apps
 #  `apt-get remove -y mysql-server mysql-server-core-5.5 phpmyadmin`
