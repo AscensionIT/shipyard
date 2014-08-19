@@ -17,7 +17,7 @@ task :install do
   dbuser = 'root'
   dbpassword = metadata['dbinfo']['dbpass']
   dbname = metadata['dbinfo']['dbname']
-  system_fqdn = metadata['fqdn']
+  system_fqdn = metadata['host']
   app_config[:system_fqdn] = system_fqdn
   
   app_config[:username] = metadata['username']
