@@ -61,7 +61,7 @@ api_key = JSON.parse(response_json.body)['api_key']
 uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/v1/hosts/1/")
 http = Net::HTTP.new(uri.host, uri.port)
 req = Net::HTTP::Put.new(uri.request_uri)
-eq.add_field("Authorization", "ApiKey admin:#{api_key}")
+req.add_field("Authorization", "ApiKey admin:#{api_key}")
 req.add_field("Content-Type", "application/json")
 #req.set_form_data('{"enabled": true}')
 #req.set_form_data('enabled' => false)
