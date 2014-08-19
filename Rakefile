@@ -50,32 +50,32 @@ rescue Exception => e
 puts 'rescued'
 end
 
-uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/login")
-http = Net::HTTP.new(uri.host, uri.port)
-req = Net::HTTP::Post.new(uri.request_uri)
-req.set_form_data('username' => 'admin', 'password' => 'shipyard')
-response_json = http.request(req)
-api_key = JSON.parse(response_json.body)['api_key']
-
-
-uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/v1/hosts/1/")
-http = Net::HTTP.new(uri.host, uri.port)
-req = Net::HTTP::Put.new(uri.request_uri)
-req.add_field("Authorization", "ApiKey admin:#{api_key}")
-req.add_field("Content-Type", "application/json")
-#req.set_form_data('{"enabled": true}')
-#req.set_form_data('enabled' => false)
-req.body = {:enabled => true}.to_json
-response = http.request(req)
-
-puts response.code
-
-  File.unlink("/etc/nginx/sites-available/default")
-
-  new_config = ERB.new(File.read("/var/www/default")).result(binding)
-  File.open("/etc/nginx/sites-available/default", "w"){|file| file.write(new_config) }
-
-  `/etc/init.d/nginx restart`
+#uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/login")
+#http = Net::HTTP.new(uri.host, uri.port)
+#req = Net::HTTP::Post.new(uri.request_uri)
+#req.set_form_data('username' => 'admin', 'password' => 'shipyard')
+#response_json = http.request(req)
+#api_key = JSON.parse(response_json.body)['api_key']
+#
+#
+#uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/v1/hosts/1/")
+#http = Net::HTTP.new(uri.host, uri.port)
+#req = Net::HTTP::Put.new(uri.request_uri)
+#req.add_field("Authorization", "ApiKey admin:#{api_key}")
+#req.add_field("Content-Type", "application/json")
+##req.set_form_data('{"enabled": true}')
+##req.set_form_data('enabled' => false)
+#req.body = {:enabled => true}.to_json
+#response = http.request(req)
+#
+#puts response.code
+#
+#  File.unlink("/etc/nginx/sites-available/default")
+#
+#  new_config = ERB.new(File.read("/var/www/default")).result(binding)
+#  File.open("/etc/nginx/sites-available/default", "w"){|file| file.write(new_config) }
+#
+#  `/etc/init.d/nginx restart`
 
   #Uninstall unwanted apps
 #  `apt-get remove -y mysql-server mysql-server-core-5.5 phpmyadmin`
