@@ -35,6 +35,8 @@ task :install do
   app_config[:phone] = metadata['phone']
   app_config[:fax] = metadata['fax']
 
+  `echo "127.0.0.1 #{app_config[:system_fqdn]}" >> /etc/hosts`
+
   #Install Shipyard
   `docker run -t -v /var/run/docker.sock:/docker.sock shipyard/deploy setup`
   `curl https://github.com/shipyard/shipyard-agent/releases/download/v0.3.2/shipyard-agent -L -o /usr/local/bin/shipyard-agent`
@@ -42,13 +44,13 @@ task :install do
 
 begin
 status = Timeout::timeout(20) {
-  `aa=$(shipyard-agent -url http://127.0.0.1:8000 -register 2>&1 ); key=\`echo ${aa##* }\`; shipyard-agent -url http://127.0.0.1:8000 -key $key &`
+  `aa=$(shipyard-agent -url http://#{app_config[:system_fqdn]}:8000 -register 2>&1 ); key=\`echo ${aa##* }\`; shipyard-agent -url http://#{app_config[:system_fqdn]}:8000 -key $key &`
 }
 rescue Exception => e
 puts 'rescued'
 end
 
-uri = URI.parse("http://127.0.0.1:8000/api/login")
+uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/login")
 http = Net::HTTP.new(uri.host, uri.port)
 req = Net::HTTP::Post.new(uri.request_uri)
 req.set_form_data('username' => 'admin', 'password' => 'shipyard')
@@ -56,7 +58,7 @@ response_json = http.request(req)
 api_key = JSON.parse(response_json.body)['api_key']
 
 
-uri = URI.parse("http://127.0.0.1:8000/api/v1/hosts/1/")
+uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/v1/hosts/1/")
 http = Net::HTTP.new(uri.host, uri.port)
 req = Net::HTTP::Put.new(uri.request_uri)
 req.add_field("Authorization", "ApiKey admin:#{api_key}")
