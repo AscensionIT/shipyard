@@ -44,7 +44,7 @@ task :install do
 
 begin
 status = Timeout::timeout(20) {
-  `/var/www/register.sh #{app_config[:system_fqdn]}`
+  `/bin/bash /var/www/register.sh #{app_config[:system_fqdn]}`
 }
 rescue Exception => e
 puts 'rescued'
