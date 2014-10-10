@@ -35,52 +35,52 @@ task :install do
   app_config[:phone] = metadata['phone']
   app_config[:fax] = metadata['fax']
 
-  `echo "127.0.0.1 #{app_config[:system_fqdn]}" >> /etc/hosts`
+
+  binding.pry
+  #Uninstall unwanted apps
+  `DEBIAN_FRONTEND=noninteractive apt-get remove -q -y mysql-server mysql-server-core-5.5 phpmyadmin nginx php5-fpm`
+  `DEBIAN_FRONTEND=noninteractive apt-get -q -y autoremove`
+  binding.pry
 
   #Install Shipyard
-  `docker run -t -v /var/run/docker.sock:/docker.sock shipyard/deploy setup`
-  `curl https://github.com/shipyard/shipyard-agent/releases/download/v0.3.2/shipyard-agent -L -o /usr/local/bin/shipyard-agent`
-  `chmod +x /usr/local/bin/shipyard-agent`
+  `docker run -it -d --name shipyard-rethinkdb-data --entrypoint /bin/bash shipyard/rethinkdb -l`
+  `docker run -it -P -d --name shipyard-rethinkdb --volumes-from shipyard-rethinkdb-data shipyard/rethinkdb`
+  `docker run -it -p 80:8080 -d --name shipyard -v /var/run/docker.sock:/docker.sock --link shipyard-rethinkdb:rethinkdb shipyard/shipyard`
 
-begin
-status = Timeout::timeout(20) {
-  `/bin/bash /var/www/register.sh #{app_config[:system_fqdn]}`
-}
-rescue Exception => e
-puts 'rescued'
-end
+  #Give about 20sec
+  sleep(20)
 
-uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/login")
-http = Net::HTTP.new(uri.host, uri.port)
-req = Net::HTTP::Post.new(uri.request_uri)
-req.set_form_data('username' => 'admin', 'password' => 'shipyard')
-response_json = http.request(req)
-api_key = JSON.parse(response_json.body)['api_key']
+binding.pry
+
+  http = Net::HTTP.new("127.0.0.1", 80)
+  request = Net::HTTP::Post.new("/auth/login")
+  request.body = '{"password":"shipyard","username":"admin"}'
+  response = http.request(request)
+  admin_token = JSON.parse(response.body)['auth_token']
+
+  binding.pry
+  request = Net::HTTP::Post.new("/api/engines")
+  request.add_field('X-Access-Token', "admin:#{admin_token}")
+  cpus = `cat /proc/cpuinfo | grep processor | wc -l`.to_i
+  mem = (`cat /proc/meminfo  |grep MemTotal |awk '{ print $2 }'`.to_i / 1024).to_i
+  request.body = '{"id": "local","ssl_cert": "","ssl_key": "","ca_cert": "",'\
+    '"engine": {"id": "local","addr": "unix:///docker.sock","cpus": ' + 
+    cpus.to_s + ',"memory": ' + mem.to_s + ',"labels": ["local","dev"]}}'
+  response = http.request(request)
+
+  binding.pry
+  request = Net::HTTP::Post.new("/api/accounts")
+  request.add_field('X-Access-Token', "admin:#{admin_token}")
+  request.body = '{"username":"' + app_config[:username].to_s + '", "password":"password","role":{"name":"admin"}}'
+  response = http.request(request)
+
+  binding.pry
+  request = Net::HTTP::Delete.new("/api/accounts")
+  request.add_field('X-Access-Token', "admin:#{admin_token}")
+  request.body = '{"username":"admin"}'
+  response = http.request(request)
 
 
-uri = URI.parse("http://#{app_config[:system_fqdn]}:8000/api/v1/hosts/1/")
-http = Net::HTTP.new(uri.host, uri.port)
-req = Net::HTTP::Put.new(uri.request_uri)
-req.add_field("Authorization", "ApiKey admin:#{api_key}")
-req.add_field("Content-Type", "application/json")
-#req.set_form_data('{"enabled": true}')
-#req.set_form_data('enabled' => false)
-req.body = {:enabled => true}.to_json
-response = http.request(req)
-
-puts response.code
-
-  File.unlink("/etc/nginx/sites-available/default")
-
-  new_config = ERB.new(File.read("/var/www/default")).result(binding)
-  File.open("/etc/nginx/sites-available/default", "w"){|file| file.write(new_config) }
-
-  `/etc/init.d/nginx restart`
-
-  #Uninstall unwanted apps
-#  `apt-get remove -y mysql-server mysql-server-core-5.5 phpmyadmin`
-#  `apt-get -y autoremove`
-
-  #File.unlink("/var/www/Rakefile")
+  File.unlink("/var/www/Rakefile")
 
 end
