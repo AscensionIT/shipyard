@@ -35,12 +35,9 @@ task :install do
   app_config[:phone] = metadata['phone']
   app_config[:fax] = metadata['fax']
 
-
-  binding.pry
   #Uninstall unwanted apps
   `DEBIAN_FRONTEND=noninteractive apt-get remove -q -y mysql-server mysql-server-core-5.5 phpmyadmin nginx php5-fpm`
   `DEBIAN_FRONTEND=noninteractive apt-get -q -y autoremove`
-  binding.pry
 
   #Install Shipyard
   `docker run -it -d --name shipyard-rethinkdb-data --entrypoint /bin/bash shipyard/rethinkdb -l`
@@ -50,7 +47,6 @@ task :install do
   #Give about 20sec
   sleep(20)
 
-binding.pry
 
   http = Net::HTTP.new("127.0.0.1", 80)
   request = Net::HTTP::Post.new("/auth/login")
@@ -58,7 +54,6 @@ binding.pry
   response = http.request(request)
   admin_token = JSON.parse(response.body)['auth_token']
 
-  binding.pry
   request = Net::HTTP::Post.new("/api/engines")
   request.add_field('X-Access-Token', "admin:#{admin_token}")
   cpus = `cat /proc/cpuinfo | grep processor | wc -l`.to_i
@@ -68,13 +63,11 @@ binding.pry
     cpus.to_s + ',"memory": ' + mem.to_s + ',"labels": ["local","dev"]}}'
   response = http.request(request)
 
-  binding.pry
   request = Net::HTTP::Post.new("/api/accounts")
   request.add_field('X-Access-Token', "admin:#{admin_token}")
   request.body = '{"username":"' + app_config[:username].to_s + '", "password":"password","role":{"name":"admin"}}'
   response = http.request(request)
 
-  binding.pry
   request = Net::HTTP::Delete.new("/api/accounts")
   request.add_field('X-Access-Token', "admin:#{admin_token}")
   request.body = '{"username":"admin"}'
