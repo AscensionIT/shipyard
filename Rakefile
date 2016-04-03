@@ -35,43 +35,19 @@ task :install do
   app_config[:phone] = metadata['phone']
   app_config[:fax] = metadata['fax']
 
+  #Install Docker
+  `apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D`
+  `echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" > /etc/apt/sources.list.d/docker.list`
+  `DEBIAN_FRONTEND=noninteractive apt-get update`
+  `DEBIAN_FRONTEND=noninteractive apt-get install -y docker-engine`
+  `service docker start`
+  
   #Uninstall unwanted apps
-  `DEBIAN_FRONTEND=noninteractive apt-get remove -q -y mysql-server mysql-server-core-5.5 phpmyadmin nginx php5-fpm`
+  `DEBIAN_FRONTEND=noninteractive apt-get remove -q -y mysql-server apache2`
   `DEBIAN_FRONTEND=noninteractive apt-get -q -y autoremove`
 
   #Install Shipyard
-  `docker run -it -d --name shipyard-rethinkdb-data --entrypoint /bin/bash shipyard/rethinkdb -l`
-  `docker run -it -P -d --name shipyard-rethinkdb --volumes-from shipyard-rethinkdb-data shipyard/rethinkdb`
-  `docker run -it -p 80:8080 -d --name shipyard -v /var/run/docker.sock:/docker.sock --link shipyard-rethinkdb:rethinkdb shipyard/shipyard`
-
-  #Give about 20sec
-  sleep(20)
-
-
-  http = Net::HTTP.new("127.0.0.1", 80)
-  request = Net::HTTP::Post.new("/auth/login")
-  request.body = '{"password":"shipyard","username":"admin"}'
-  response = http.request(request)
-  admin_token = JSON.parse(response.body)['auth_token']
-
-  request = Net::HTTP::Post.new("/api/engines")
-  request.add_field('X-Access-Token', "admin:#{admin_token}")
-  cpus = `cat /proc/cpuinfo | grep processor | wc -l`.to_i
-  mem = (`cat /proc/meminfo  |grep MemTotal |awk '{ print $2 }'`.to_i / 1024).to_i
-  request.body = '{"id": "local","ssl_cert": "","ssl_key": "","ca_cert": "",'\
-    '"engine": {"id": "local","addr": "unix:///docker.sock","cpus": ' + 
-    cpus.to_s + ',"memory": ' + mem.to_s + ',"labels": ["local","dev"]}}'
-  response = http.request(request)
-
-  request = Net::HTTP::Post.new("/api/accounts")
-  request.add_field('X-Access-Token', "admin:#{admin_token}")
-  request.body = '{"username":"' + app_config[:username].to_s + '", "password":"password","role":{"name":"admin"}}'
-  response = http.request(request)
-
-  request = Net::HTTP::Delete.new("/api/accounts")
-  request.add_field('X-Access-Token', "admin:#{admin_token}")
-  request.body = '{"username":"admin"}'
-  response = http.request(request)
+  `curl -sSL https://shipyard-project.com/deploy | bash -s`
 
 
   File.unlink("/var/www/Rakefile")
